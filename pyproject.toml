@@ -1,0 +1,62 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "jabfy-sim"
+version = "0.1.0"
+description = "JABFY Simulation Lab — real-protocol hardware environment emulator"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "Proprietary" }
+authors = [{ name = "Jabfy Corp" }]
+keywords = ["iot", "mqtt", "zigbee2mqtt", "simulation", "smart-home", "jabfy"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Home Automation",
+]
+
+# Core deps: device engine + MQTT emitter only (no jabfy-bus required)
+dependencies = [
+    "paho-mqtt>=2.0",
+    "pydantic>=2.0",
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+# Full pipeline: embeds jabfy-bus verification + execution.
+# Install jabfy-bus separately first: pip install -e ../jabfy-bus[all]
+bus = ["jabfy-bus[all]"]
+# Modbus TCP server for climate devices
+modbus = ["pymodbus>=3.0"]
+# HTTP mock servers (SmartTV + NAS) — requires fastapi + uvicorn
+http = ["fastapi>=0.110", "uvicorn>=0.29"]
+# All optional extras
+full = ["jabfy-bus[all]", "pymodbus>=3.0", "fastapi>=0.110", "uvicorn>=0.29"]
+dev = [
+    "jabfy-bus[all]",
+    "pymodbus>=3.0",
+    "fastapi>=0.110",
+    "uvicorn>=0.29",
+    "httpx>=0.27",      # async HTTP client for FastAPI test client
+    "pytest>=8.0",
+    "pytest-timeout>=2.3",
+    "pytest-asyncio>=0.23",
+]
+
+[project.scripts]
+jabfy-sim = "sim.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["sim*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

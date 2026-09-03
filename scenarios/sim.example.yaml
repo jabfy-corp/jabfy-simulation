@@ -1,0 +1,93 @@
+# jabfy-sim configuration example
+# Run with: jabfy-sim run --config scenarios/sim.example.yaml
+
+broker:
+  host: localhost
+  port: 1883
+  keepalive: 60
+  client_id_prefix: jabfy-sim
+
+tick_interval_ms: 200
+audit_path: audit.jsonl
+
+devices:
+  # ── Lighting ─────────────────────────────────────────────────────
+  - id: salon_lamp
+    type: dimmer_light
+    location: salon
+    topic_prefix: zigbee2mqtt/salon_lamp
+    telemetry_interval_ms: 5000
+
+  - id: kitchen_light
+    type: on_off_light
+    location: cuisine
+    topic_prefix: zigbee2mqtt/kitchen_light
+    telemetry_interval_ms: 5000
+
+  # ── Security ─────────────────────────────────────────────────────
+  - id: salon_motion
+    type: motion_sensor
+    location: salon
+    topic_prefix: zigbee2mqtt/salon_motion
+    telemetry_interval_ms: 200
+
+  - id: front_door
+    type: door_lock
+    location: entree
+    topic_prefix: zigbee2mqtt/front_door
+    telemetry_interval_ms: 10000
+    init:
+      locked: true
+
+  - id: smoke_detector
+    type: smoke_sensor
+    location: cuisine
+    topic_prefix: zigbee2mqtt/smoke_detector
+    telemetry_interval_ms: 30000
+
+  # ── Climate ──────────────────────────────────────────────────────
+  - id: salon_temp
+    type: temperature_sensor
+    location: salon
+    topic_prefix: zigbee2mqtt/salon_temp
+    telemetry_interval_ms: 10000
+    init:
+      temperature: 20.5
+      humidity: 48.0
+      seed: 42
+
+  - id: salon_thermostat
+    type: thermostat
+    location: salon
+    topic_prefix: zigbee2mqtt/salon_thermostat
+    telemetry_interval_ms: 30000
+    init:
+      setpoint: 21.0
+      current_temperature: 19.5
+
+reflex_rules:
+  # motion in salon → turn on salon lamp
+  - name: motion_to_light
+    trigger:
+      entity_id: binary_sensor.salon_motion_occupancy
+      value: true
+      location: salon
+    command:
+      action: turn_on
+      target_entity_id: switch.salon_lamp_state
+      target_domain: switch
+      target_mqtt_topic: zigbee2mqtt/salon_lamp
+      target_location: salon
+
+  # motion cleared in salon → turn off salon lamp
+  - name: no_motion_off_light
+    trigger:
+      entity_id: binary_sensor.salon_motion_occupancy
+      value: false
+      location: salon
+    command:
+      action: turn_off
+      target_entity_id: switch.salon_lamp_state
+      target_domain: switch
+      target_mqtt_topic: zigbee2mqtt/salon_lamp
+      target_location: salon

@@ -1,0 +1,30 @@
+services:
+  mosquitto:
+    image: eclipse-mosquitto:2
+    ports:
+      - "1883:1883"
+    volumes:
+      - ./docker/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+    healthcheck:
+      test: ["CMD", "mosquitto_pub", "-h", "localhost", "-t", "healthcheck", "-m", "ok"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  jabfy-sim:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      mosquitto:
+        condition: service_healthy
+    environment:
+      - LOG_LEVEL=INFO
+    command: >
+      jabfy-sim demo
+        --broker mosquitto:1883
+        --steps 20
+        --audit /app/audit.jsonl
+    volumes:
+      # Mount audit log so it survives container stop
+      - ./audit.jsonl:/app/audit.jsonl
