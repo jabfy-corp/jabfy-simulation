@@ -28,6 +28,8 @@ class SmartTV(Device):
       app            — str | None (currently active app)
     """
 
+    device_type = "smart_tv"
+
     def __init__(
         self,
         id: str,

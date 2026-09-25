@@ -18,6 +18,8 @@ from sim.devices.base import Device
 from sim.emitters.mqtt import MQTTEmitter
 
 logger = logging.getLogger(__name__)
+# Device servers and their gateway live in this process/container, not on the broker.
+DEVICE_SERVER_HOST = "127.0.0.1"
 
 
 class SimRunner:
@@ -49,7 +51,7 @@ class SimRunner:
                     http_cfgs.append(SmartTVHttpConfig(
                         entity_id=f"switch.{dev.id}",
                         location=dev.location,
-                        base_url=f"http://{config.broker.host}:{tv_port}/api/v2",
+                        base_url=f"http://{DEVICE_SERVER_HOST}:{tv_port}/api/v2",
                     ))
 
             # Build Modbus config for climate devices
@@ -72,7 +74,7 @@ class SimRunner:
             if modbus_units:
                 modbus_port = getattr(config, "modbus_port", 5020)
                 modbus_cfg = ModbusClimateConfig(
-                    host=config.broker.host,
+                    host=DEVICE_SERVER_HOST,
                     port=modbus_port,
                     units=modbus_units,
                 )
@@ -96,7 +98,7 @@ class SimRunner:
             from sim.emitters.modbus_server import ModbusServer  # noqa: PLC0415
             self.modbus_server = ModbusServer(
                 devices=self.devices,
-                host=config.broker.host,  # bind on same host as broker
+                host=DEVICE_SERVER_HOST,
                 port=getattr(config, "modbus_port", 5020),
             )
         except ImportError:
@@ -111,7 +113,7 @@ class SimRunner:
             tv = tv_devices[0] if tv_devices else None
             self.http_server = HTTPMockServer(
                 tv_device=tv,
-                host=config.broker.host,
+                host=DEVICE_SERVER_HOST,
                 tv_port=getattr(config, "tv_api_port", 8001),
                 nas_port=getattr(config, "nas_api_port", 5000),
             )
@@ -134,16 +136,7 @@ class SimRunner:
                 f"Cannot connect to MQTT broker at {broker.host}:{broker.port}. "
                 "Start Mosquitto first: docker compose up mosquitto -d"
             ) from None
-        if self.bus_runner:
-            try:
-                self.bus_runner.connect()
-            except ConnectionRefusedError:
-                raise ConnectionRefusedError(
-                    f"BusRunner cannot connect to MQTT broker at {broker.host}:{broker.port}."
-                ) from None
-            # Small delay to let BusRunner subscribe before emitter starts
-            time.sleep(0.3)
-
+        # Start device-side servers before the gateway begins polling them.
         if self.modbus_server:
             self.modbus_server.start()
 
@@ -151,6 +144,16 @@ class SimRunner:
             self.http_server.start()
             # Give uvicorn a moment to bind
             time.sleep(0.5)
+
+        if self.bus_runner:
+            try:
+                self.bus_runner.connect()
+            except ConnectionRefusedError:
+                raise ConnectionRefusedError(
+                    f"BusRunner cannot connect to MQTT broker at {broker.host}:{broker.port}."
+                ) from None
+            # Let the gateway subscribe before device telemetry begins.
+            time.sleep(0.3)
 
         logger.info(
             "SimRunner started — %d device(s), tick_interval=%dms",

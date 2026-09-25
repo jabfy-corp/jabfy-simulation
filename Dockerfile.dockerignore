@@ -1,0 +1,21 @@
+# This Dockerfile uses the parent workspace as its build context.
+# Include only package sources; never send homes, secrets or virtualenvs.
+**
+!jabfy-bus/
+!jabfy-bus/pyproject.toml
+!jabfy-bus/README.md
+!jabfy-bus/jabfy_bus/
+!jabfy-bus/jabfy_bus/**
+!jabfy-simulation/
+!jabfy-simulation/pyproject.toml
+!jabfy-simulation/README.md
+!jabfy-simulation/sim/
+!jabfy-simulation/sim/**
+!jabfy-simulation/scenarios/
+!jabfy-simulation/scenarios/**
+!jabfy-simulation/docker/
+!jabfy-simulation/docker/**
+**/__pycache__/
+**/*.pyc
+**/.env
+**/.env.*

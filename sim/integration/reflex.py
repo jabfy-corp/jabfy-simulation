@@ -68,6 +68,23 @@ class ReflexEngine:
             MessageType.STATE_CHANGED.value, self._on_event, name="reflex_engine"
         )
 
+    def restore_unchanged_rules(self, previous: ReflexEngine) -> None:
+        """Keep edge detection when an editor save rebuilds an unchanged automation.
+
+        New/modified rules start fresh. This prevents an unrelated layout rename
+        from treating a resting motion sensor as a new event and undoing a manual
+        light command.
+        """
+        old_rules = {rule.name: rule for rule in previous.rules}
+        for rule in self.rules:
+            if old_rules.get(rule.name) != rule:
+                continue
+            if rule.name in previous._last_fired:
+                self._last_fired[rule.name] = previous._last_fired[rule.name]
+            entity_id = rule.trigger.entity_id
+            if entity_id in previous._entity_values:
+                self._entity_values[entity_id] = previous._entity_values[entity_id]
+
     def _on_event(self, message: BusMessage) -> None:
         entity = message.entity
         if entity is None or message.value is None:

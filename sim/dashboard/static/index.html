@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light">
+    <meta name="theme-color" content="#f3f4ec">
+    <title>JABFY · Maison simulée</title>
+    <link rel="icon" href="data:,">
+    <link rel="stylesheet" href="/static/app.css">
+    <script type="importmap">{"imports":{"three":"/static/vendor/three.module.js"}}</script>
+    <script type="module" src="/static/app.js"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Aller au contenu</a>
+    <header class="site-header">
+      <a class="brand" href="/" aria-label="JABFY, accueil du simulateur"><span class="brand-mark" aria-hidden="true">⌘</span> JABFY <span class="brand-context">/ Simulation</span></a>
+      <div class="header-actions"><span id="connection" class="connection" role="status">Connexion…</span><button id="save-home" class="primary" disabled>Enregistrer la maison</button></div>
+    </header>
+    <main id="main">
+      <div class="workspace-heading"><div><p class="eyebrow">Un espace pour expérimenter</p><h1 id="home-title">Votre maison simulée</h1></div><p id="save-status" class="save-status" role="status">Chargement de la maison…</p></div>
+      <div id="notice" class="notice" role="status" hidden></div>
+      <div class="workspace">
+        <section class="scene-panel" aria-label="Vue 3D de la maison">
+          <div class="scene-toolbar"><div class="segmented" aria-label="Mode de navigation"><button id="orbit-mode" class="active" aria-pressed="true">Vue d’ensemble</button><button id="visit-mode" aria-pressed="false">Visiter</button></div><button id="fit-view" class="quiet-button">Recentrer</button></div>
+          <div id="scene" class="scene"><p class="scene-loading" id="scene-loading">Construction de la maison…</p></div>
+          <div id="room-shortcuts" class="room-shortcuts" aria-label="Visiter une pièce"></div>
+          <div class="scene-caption"><span id="navigation-help">Glissez pour tourner · Molette pour zoomer · Cliquez sur un appareil</span><span class="live-label" id="scene-status">États en attente</span></div>
+          <div id="walk-pad" class="walk-pad" aria-label="Déplacement en visite" hidden><button data-walk="forward" aria-label="Avancer">↑</button><div><button data-walk="left" aria-label="Aller à gauche">←</button><button data-walk="back" aria-label="Reculer">↓</button><button data-walk="right" aria-label="Aller à droite">→</button></div></div>
+          <div class="scene-empty" id="scene-empty" hidden><h2>Votre première pièce</h2><p>Ajoutez une pièce dans le panneau Maison, puis placez-y vos appareils.</p></div>
+        </section>
+        <aside class="inspector" aria-label="Édition et contrôle">
+          <div class="tabs" role="tablist" aria-label="Panneaux"><button id="tab-home" role="tab" aria-selected="true" aria-controls="panel-home" data-tab="home">Maison</button><button id="tab-device" role="tab" aria-selected="false" aria-controls="panel-device" data-tab="device" tabindex="-1">Appareil</button><button id="tab-ai" role="tab" aria-selected="false" aria-controls="panel-ai" data-tab="ai" tabindex="-1">IA</button></div>
+          <section id="panel-home" class="tab-panel" role="tabpanel" aria-labelledby="tab-home">
+            <div class="panel-heading"><h2>Composer la maison</h2><span class="tag">1 niveau</span></div>
+            <p class="muted small">Modifiez le plan, puis enregistrez pour appliquer la configuration à la simulation.</p>
+            <label class="field">Nom de la maison<input id="home-name" maxlength="100" autocomplete="off"></label>
+            <div class="subheading"><h3>Pièces</h3><button id="add-room" class="small-button">+ Ajouter</button></div>
+            <label class="field">Pièce à modifier<select id="room-select"></select></label>
+            <form id="room-form" class="form-grid"></form>
+            <button id="delete-room" class="danger-link" type="button">Supprimer la pièce et ses appareils</button>
+            <div class="subheading"><h3>Appareils</h3><button id="add-device" class="small-button">+ Ajouter</button></div>
+            <div id="device-list" class="device-list"></div>
+            <div class="subheading"><h3>Automatisations</h3></div>
+            <p class="muted small">Une présence allume la lampe choisie. Son absence l’éteint.</p>
+            <div id="automation-list" class="automation-list"></div>
+            <form id="automation-form" class="stack"><label class="field">Détecteur<select name="motion_device_id" required></select></label><label class="field">Lampe<select name="target_device_id" required></select></label><button type="submit" class="secondary">Relier le capteur à la lampe</button></form>
+            <details class="file-options"><summary>Fichier de la maison</summary><div class="button-row"><button id="export-home" class="secondary">Exporter JSON</button><button id="import-home" class="secondary">Importer JSON</button></div><input id="import-file" type="file" accept="application/json,.json" hidden><button id="discard-changes" class="quiet-button">Annuler les modifications non enregistrées</button></details>
+          </section>
+          <section id="panel-device" class="tab-panel" role="tabpanel" aria-labelledby="tab-device" hidden>
+            <div class="panel-heading"><h2 id="device-title">Choisir un appareil</h2><span id="device-live-badge" class="tag">Simulé</span></div>
+            <label class="field">Appareil sélectionné<select id="device-select"></select></label>
+            <p id="device-empty" class="muted small">Cliquez sur un appareil dans la scène ou ajoutez-en un à la maison.</p>
+            <div id="device-edit" hidden><form id="device-form" class="form-grid"></form><p class="muted tiny">Les positions X / Z sont relatives à la pièce, en mètres.</p><button id="delete-device" class="danger-link">Supprimer cet appareil</button></div>
+            <div class="divider"></div><div class="subheading"><h3>Piloter en direct</h3></div><p id="device-state" class="state-reading">Aucun appareil sélectionné</p><div id="manual-controls" class="stack"></div><p id="control-feedback" class="feedback" role="status"></p>
+          </section>
+          <section id="panel-ai" class="tab-panel" role="tabpanel" aria-labelledby="tab-ai" hidden>
+            <div class="panel-heading"><h2>Donner une intention</h2><span class="tag">IA locale</span></div>
+            <p class="muted small">L’IA reçoit l’inventaire de la maison, les états et les commandes disponibles. Vérifiez sa proposition avant de l’appliquer.</p>
+            <div class="subheading"><h3>Connexion à Jabfy Core</h3><button id="refresh-ai" class="small-button">Actualiser</button></div><p id="ai-status" class="muted small" role="status">Ouvrez ce panneau pour vérifier les modèles disponibles.</p>
+            <form id="ai-form" class="stack"><label class="field">Modèle<select id="ai-model" required><option value="">Aucun modèle chargé</option></select></label><label class="field">Que souhaitez-vous ?<textarea id="ai-prompt" rows="4" maxlength="4000" placeholder="Allume les lampes du salon." required></textarea></label><button id="ask-ai" type="submit" class="primary" disabled>Proposer des actions</button></form>
+            <div id="ai-proposal" class="proposal" hidden><h3>Proposition à vérifier</h3><p id="ai-explanation" class="small"></p><ol id="ai-commands"></ol><button id="apply-ai" class="primary">Appliquer ces actions</button></div><p id="ai-feedback" class="feedback" role="status"></p>
+            <details class="inventory-details"><summary>Inventaire transmis à l’IA</summary><p class="muted tiny">Données du simulateur et capacités réellement disponibles.</p><pre id="ai-context">Inventaire non chargé.</pre></details>
+          </section>
+        </aside>
+      </div>
+      <section class="activity" aria-label="Journal de la simulation"><details open><summary><span>Le fil de la simulation</span><span id="event-summary" class="muted tiny">En attente</span></summary><ol id="events" class="events"><li class="muted small">Les actions et changements d’état apparaîtront ici.</li></ol></details></section>
+    </main>
+    <footer><span>JABFY SIM · Prototype local</span><span id="simulation-summary">Appareils virtuels, états réels du simulateur.</span></footer>
+    <noscript><p class="notice">Activez JavaScript pour éditer et visiter la maison.</p></noscript>
+  </body>
+</html>

@@ -1,8 +1,9 @@
 services:
   mosquitto:
     image: eclipse-mosquitto:2
+    restart: unless-stopped
     ports:
-      - "1883:1883"
+      - "127.0.0.1:${MQTT_PORT:-1883}:1883"
     volumes:
       - ./docker/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
     healthcheck:
@@ -11,20 +12,66 @@ services:
       timeout: 3s
       retries: 5
 
+  ollama:
+    image: ollama/ollama:latest
+    restart: unless-stopped
+    environment:
+      OLLAMA_NO_CLOUD: "1"
+    volumes:
+      - ollama-models:/root/.ollama
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
+
+  core:
+    build:
+      context: ../jabfy-core
+    restart: unless-stopped
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+      JABFY_SIMULATION_URL: http://jabfy-sim:8080
+    # Core can serve its health endpoint without Ollama or a loaded model.
+    depends_on:
+      ollama:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
+
   jabfy-sim:
     build:
-      context: .
-      dockerfile: Dockerfile
+      # The image installs the sibling jabfy-bus checkout as a dependency.
+      # Docker COPY can only access files inside its build context.
+      context: ..
+      dockerfile: jabfy-simulation/Dockerfile
+    init: true
+    restart: unless-stopped
+    stop_grace_period: 30s
+    ports:
+      - "127.0.0.1:${SIM_PORT:-8080}:8080"
     depends_on:
       mosquitto:
         condition: service_healthy
+      core:
+        condition: service_healthy
     environment:
-      - LOG_LEVEL=INFO
-    command: >
-      jabfy-sim demo
-        --broker mosquitto:1883
-        --steps 20
-        --audit /app/audit.jsonl
+      MQTT_BROKER: mosquitto:1883
+      JABFY_CORE_URL: http://core:8000
     volumes:
-      # Mount audit log so it survives container stop
-      - ./audit.jsonl:/app/audit.jsonl
+      # Mount a directory: Compose creates it safely on the first run.
+      - ./data:/app/data
+    healthcheck:
+      test: ["CMD", "python", "/app/docker/healthcheck.py"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
+
+volumes:
+  ollama-models:
