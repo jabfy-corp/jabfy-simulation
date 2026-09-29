@@ -148,6 +148,7 @@ class Dashboard:
 
     def context(self) -> dict:
         """The same inventory serves the editor, 3D view and Jabfy Core."""
+        from sim.dashboard.commands import entity_id
         from sim.home.catalog import device_capabilities
 
         with self._lock:
@@ -155,15 +156,21 @@ class Dashboard:
                 raise HTTPException(404, "Aucune maison éditable chargée.")
             rooms = {room.id: room for room in self.home.rooms}
             states = {device["id"]: device for device in self._snapshot.get("devices", [])}
+            live = {device.id: device for device in self.runner.devices}
             inventory = []
             for device in self.home.devices:
                 capabilities = device_capabilities(device.type)
-                inventory.append({
+                entry = {
                     **device.model_dump(), "room_name": rooms[device.room_id].name,
                     "state": deepcopy(states.get(device.id, {}).get("state", {})),
                     "actions": capabilities["actions"],
                     "sensor_events": capabilities["sensor_events"],
-                })
+                }
+                if device.id in live:
+                    entry["bus"] = {"entity_id": entity_id(live[device.id]),
+                                    "domain": capabilities["domain"],
+                                    "topic": live[device.id].telemetry_topic}
+                inventory.append(entry)
             return {
                 "schema_version": 1, "simulation": True, "revision": self.revision,
                 "status": self._status,

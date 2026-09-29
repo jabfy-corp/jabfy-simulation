@@ -65,3 +65,4 @@ target-version = "py311"
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"
+markers = ["e2e: needs the running docker compose stack (JABFY_E2E_URL)"]

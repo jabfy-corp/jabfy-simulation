@@ -35,5 +35,6 @@ export const api = {
   event: (id, event) => request(`/api/devices/${encodeURIComponent(id)}/events`, { method: "POST", body: JSON.stringify({ event }) }),
   context: () => request("/api/ai/context"),
   models: () => request("/api/ai/models", { timeout: 15000 }),
-  propose: (model, prompt) => request("/api/ai/propose", { method: "POST", body: JSON.stringify({ model, prompt }), timeout: 180000 }),
+  prompt: (model, prompt) => request("/api/ai/prompt", { method: "POST", body: JSON.stringify({ model, prompt }) }),
+  run: (id) => request(`/api/ai/runs/${encodeURIComponent(id)}`, { timeout: 5000 }),
 };

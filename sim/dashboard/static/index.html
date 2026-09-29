@@ -56,10 +56,10 @@
           </section>
           <section id="panel-ai" class="tab-panel" role="tabpanel" aria-labelledby="tab-ai" hidden>
             <div class="panel-heading"><h2>Donner une intention</h2><span class="tag">IA locale</span></div>
-            <p class="muted small">L’IA reçoit l’inventaire de la maison, les états et les commandes disponibles. Vérifiez sa proposition avant de l’appliquer.</p>
+            <p class="muted small">L’IA reçoit l’inventaire de la maison, les états et les commandes disponibles. Jabfy Core exécute ses actions après vérification par le bus.</p>
             <div class="subheading"><h3>Connexion à Jabfy Core</h3><button id="refresh-ai" class="small-button">Actualiser</button></div><p id="ai-status" class="muted small" role="status">Ouvrez ce panneau pour vérifier les modèles disponibles.</p>
-            <form id="ai-form" class="stack"><label class="field">Modèle<select id="ai-model" required><option value="">Aucun modèle chargé</option></select></label><label class="field">Que souhaitez-vous ?<textarea id="ai-prompt" rows="4" maxlength="4000" placeholder="Allume les lampes du salon." required></textarea></label><button id="ask-ai" type="submit" class="primary" disabled>Proposer des actions</button></form>
-            <div id="ai-proposal" class="proposal" hidden><h3>Proposition à vérifier</h3><p id="ai-explanation" class="small"></p><ol id="ai-commands"></ol><button id="apply-ai" class="primary">Appliquer ces actions</button></div><p id="ai-feedback" class="feedback" role="status"></p>
+            <form id="ai-form" class="stack"><label class="field">Modèle<select id="ai-model" required><option value="">Aucun modèle chargé</option></select></label><label class="field">Que souhaitez-vous ?<textarea id="ai-prompt" rows="4" maxlength="4000" placeholder="Allume les lampes du salon." required></textarea></label><button id="ask-ai" type="submit" class="primary" disabled>Envoyer à Jabfy Core</button></form>
+            <div id="ai-proposal" class="proposal" hidden><h3>Raisonnement de Jabfy Core</h3><p id="ai-explanation" class="small"></p><ol id="ai-commands"></ol></div><p id="ai-feedback" class="feedback" role="status"></p>
             <details class="inventory-details"><summary>Inventaire transmis à l’IA</summary><p class="muted tiny">Données du simulateur et capacités réellement disponibles.</p><pre id="ai-context">Inventaire non chargé.</pre></details>
           </section>
         </aside>

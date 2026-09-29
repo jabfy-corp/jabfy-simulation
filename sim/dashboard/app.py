@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any, Literal
 
-from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi import Depends, FastAPI, HTTPException, Path as PathParam, Request
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, Field
@@ -106,6 +106,14 @@ def create_app(runner: Any, *, home=None, store=None, runner_factory=None,
     @app.post("/api/ai/propose", dependencies=[Depends(same_origin)])
     def propose(body: ProposalInput):
         return core.request("/simulation/propose", body.model_dump())
+
+    @app.post("/api/ai/prompt", status_code=202, dependencies=[Depends(same_origin)])
+    def prompt(body: ProposalInput):
+        return core.request("/prompt", body.model_dump())
+
+    @app.get("/api/ai/runs/{run_id}")
+    def run(run_id: str = PathParam(pattern=r"^[0-9a-f-]{36}$")):
+        return core.request(f"/prompts/{run_id}")
 
     @app.get("/", include_in_schema=False)
     def index():

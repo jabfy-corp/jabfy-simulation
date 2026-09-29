@@ -1,6 +1,9 @@
-/** Model proposals are previews. Applying them is a separate explicit action. */
+/** Jabfy Core reasons and acts through the bus; this panel only follows the run. */
 import { api } from "./api.js";
 import { $, el, text, options, feedback } from "./ui.js";
+
+const TERMINAL = new Set(["completed", "failed", "rejected", "no_action"]);
+const STEP_LABELS = { pending: "en attente", requested: "demandée", approved: "approuvée", rejected: "refusée", executed: "exécutée", failed: "échec" };
 
 export class AIInspector {
   constructor({ getHome, getDirty, onAction }) {
@@ -10,11 +13,10 @@ export class AIInspector {
     this.loaded = false;
     this.loading = false;
     this.busy = false;
-    this.plan = null;
+    this.runId = null;
     this.modelsAvailable = false;
     $("refresh-ai").addEventListener("click", () => this.refresh());
-    $("ai-form").addEventListener("submit", (event) => { event.preventDefault(); this.propose(); });
-    $("apply-ai").addEventListener("click", () => this.apply());
+    $("ai-form").addEventListener("submit", (event) => { event.preventDefault(); this.send(); });
   }
 
   async open() { if (!this.loaded && !this.loading) await this.refresh(); }
@@ -50,46 +52,45 @@ export class AIInspector {
   update(revision) {
     if (revision !== undefined) this.revision = revision;
     $("ask-ai").disabled = !this.modelsAvailable || this.busy || this.getDirty();
-    const outdated = this.plan && this.revision && this.plan.context_revision !== this.revision;
-    $("apply-ai").disabled = !this.plan?.commands?.length || this.busy || this.getDirty() || Boolean(outdated);
-    if (outdated) feedback("ai-feedback", "La maison a changé depuis cette proposition. Demandez une nouvelle proposition.", true);
-    else if (this.getDirty()) feedback("ai-feedback", "Enregistrez la maison avant de demander ou d’appliquer une proposition.");
+    if (this.getDirty()) feedback("ai-feedback", "Enregistrez la maison avant d’envoyer une consigne.");
   }
 
-  async propose() {
+  async send() {
     if (this.busy || this.getDirty() || !$("ai-form").reportValidity()) return;
-    this.busy = true; this.plan = null; $("ai-proposal").hidden = true;
-    this.update(); feedback("ai-feedback", "L’IA analyse la maison. Cela peut prendre quelques instants…");
+    this.busy = true; $("ai-proposal").hidden = true;
+    this.update(); feedback("ai-feedback", "Consigne envoyée à Jabfy Core…");
     try {
-      const plan = await api.propose($("ai-model").value, $("ai-prompt").value);
-      if (!Array.isArray(plan.commands)) throw new Error("La réponse ne contient pas de proposition valide.");
-      this.plan = plan;
-      text($("ai-explanation"), plan.explanation || "Vérifiez les actions suivantes.");
-      $("ai-commands").replaceChildren();
-      for (const command of plan.commands) {
-        const device = this.getHome()?.devices.find((d) => d.id === command.device_id);
-        const line = `${device?.name || command.device_id} : ${command.action}${Object.keys(command.params || {}).length ? ` ${JSON.stringify(command.params)}` : ""}`;
-        $("ai-commands").append(el("li", "", line));
+      const { prompt_id: id } = await api.prompt($("ai-model").value, $("ai-prompt").value);
+      this.runId = id;
+      let run = await api.run(id);
+      while (this.runId === id && !TERMINAL.has(run.status)) {
+        this.render(run);
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        run = await api.run(id);
       }
-      $("ai-proposal").hidden = false;
-      feedback("ai-feedback", plan.commands.length ? "Aucune commande n’est envoyée avant votre clic sur Appliquer." : "L’IA ne propose aucune action sur les appareils.");
+      this.render(run);
+      if (run.status === "completed") feedback("ai-feedback", `${run.steps.length} action${run.steps.length > 1 ? "s" : ""} exécutée${run.steps.length > 1 ? "s" : ""}.`);
+      else if (run.status === "no_action") feedback("ai-feedback", "Jabfy Core n’a lancé aucune action.");
+      else feedback("ai-feedback", `Arrêt : ${run.error || "la séquence n’a pas abouti."}`, true);
     } catch (error) { feedback("ai-feedback", error.message, true); }
-    finally { this.busy = false; this.update(); }
+    finally { this.busy = false; this.update(); this.onAction?.(); }
   }
 
-  async apply() {
-    if (!this.plan || this.busy || this.getDirty() || $("apply-ai").disabled) return;
-    this.busy = true; this.update();
-    let executed = 0;
-    try {
-      for (const command of this.plan.commands) {
-        feedback("ai-feedback", `Exécution ${executed + 1}/${this.plan.commands.length}…`);
-        const result = await api.command(command.device_id, command.action, command.params || {}, this.plan.context_revision);
-        if (result.status !== "executed") throw new Error(result.reason || "La commande a été refusée.");
-        executed += 1;
-      }
-      feedback("ai-feedback", `${executed} action${executed > 1 ? "s" : ""} exécutée${executed > 1 ? "s" : ""}.`);
-    } catch (error) { feedback("ai-feedback", `${executed} action(s) exécutée(s), puis arrêt : ${error.message}`, true); }
-    finally { this.plan = null; this.busy = false; this.update(); this.onAction?.(); }
+  render(run) {
+    if (run.status === "queued" || run.status === "planning") {
+      feedback("ai-feedback", "Jabfy Core analyse la maison…");
+      return;
+    }
+    text($("ai-explanation"), run.explanation || "");
+    $("ai-commands").replaceChildren();
+    for (const step of run.steps) {
+      const device = this.getHome()?.devices.find((d) => d.id === step.device_id);
+      const delay = step.delay_ms ? `après ${step.delay_ms / 1000} s · ` : "";
+      const params = Object.keys(step.params || {}).length ? ` ${JSON.stringify(step.params)}` : "";
+      const reason = step.reason && step.status !== "executed" ? ` (${step.reason})` : "";
+      $("ai-commands").append(el("li", "", `${delay}${device?.name || step.device_id} : ${step.action}${params} — ${STEP_LABELS[step.status] || step.status}${reason}`));
+    }
+    $("ai-proposal").hidden = false;
+    if (run.status === "running") feedback("ai-feedback", "Exécution en cours…");
   }
 }

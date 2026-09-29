@@ -119,6 +119,33 @@ def test_home_catalog_context_and_live_inventory_share_logical_ids(house_api):
     assert lamp["room_name"] == "Salon"
     assert {action["action"] for action in lamp["actions"]} >= {"turn_on", "set_brightness"}
     assert lamp["state"]["state"] == "OFF"
+    assert lamp["bus"] == {"entity_id": "switch.sim_maison_salon_lamp_state", "domain": "switch",
+                           "topic": "zigbee2mqtt/sim_maison_salon_lamp"}
+    thermostat = next(device for device in context["devices"] if device["id"] == "salon_thermostat")
+    assert thermostat["bus"]["entity_id"] == "climate.sim_maison_salon_thermostat_setpoint"
+
+
+def test_prompts_and_runs_are_relayed_to_core(house_api):
+    calls = []
+    run_id = "0b9e7c52-6c39-4a3e-9f5f-1f8f0a7d6b21"
+
+    def request(path, body=None):
+        calls.append((path, body))
+        return {"prompt_id": run_id} if body is not None else {"id": run_id, "status": "running"}
+
+    house_api.app.state.core_client.request = request
+    client = house_api.client
+    response = client.post("/api/ai/prompt", json={"model": "agent", "prompt": "salon"})
+    assert response.status_code == 202 and response.json() == {"prompt_id": run_id}
+    assert client.get(f"/api/ai/runs/{run_id}").json()["status"] == "running"
+    assert calls == [("/prompt", {"model": "agent", "prompt": "salon"}), (f"/prompts/{run_id}", None)]
+
+    assert client.get("/api/ai/runs/..%2Fhealth").status_code in {404, 422}
+    assert client.get("/api/ai/runs/not-a-run").status_code == 422
+    assert client.post("/api/ai/prompt", headers={"Origin": "http://evil.example"},
+                       json={"model": "agent", "prompt": "salon"}).status_code == 403
+    assert client.post("/api/ai/prompt", json={"model": "agent"}).status_code == 422
+    assert len(calls) == 2
 
 
 @pytest.mark.parametrize("device_id, action, params, field, expected", [

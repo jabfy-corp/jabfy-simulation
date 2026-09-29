@@ -29,12 +29,18 @@ services:
   core:
     build:
       context: ../jabfy-core
+      # Core hosts the bus pipeline in process and installs this checkout.
+      additional_contexts:
+        jabfy-bus: ../jabfy-bus
     restart: unless-stopped
     environment:
       OLLAMA_HOST: http://ollama:11434
       JABFY_SIMULATION_URL: http://jabfy-sim:8080
+      JABFY_MQTT_BROKER: mosquitto:1883
     # Core can serve its health endpoint without Ollama or a loaded model.
     depends_on:
+      mosquitto:
+        condition: service_healthy
       ollama:
         condition: service_started
     healthcheck:
