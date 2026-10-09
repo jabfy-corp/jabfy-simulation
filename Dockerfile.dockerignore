@@ -1,6 +1,11 @@
 # This Dockerfile uses the parent workspace as its build context.
 # Include only package sources; never send homes, secrets or virtualenvs.
 **
+!jabfy-guard/
+!jabfy-guard/pyproject.toml
+!jabfy-guard/README.md
+!jabfy-guard/src/
+!jabfy-guard/src/**
 !jabfy-bus/
 !jabfy-bus/pyproject.toml
 !jabfy-bus/README.md

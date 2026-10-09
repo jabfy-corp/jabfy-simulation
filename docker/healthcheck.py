@@ -9,6 +9,7 @@ def main() -> None:
         state = json.load(response)
     healthy = (
         state.get("status") == "running"
+        and state.get("guard", {}).get("enabled") is True
         and state.get("broker", {}).get("connected")
         and state.get("stats", {}).get("bus", {}).get("connected")
     )

@@ -230,7 +230,8 @@ class BusRunner:
         self.bus = UniversalJsonBus()
 
         self.audit = AuditLog(audit_path)
-        self.audit.attach(self.bus)
+        # Resolve the current journal at dispatch time (house reload reuses it).
+        self.bus.subscribe("command.*", lambda message: self.audit.record_message(message), name="audit_log")
 
         self.registry = EntityRegistry()
         self.registry.attach(self.bus)
@@ -246,10 +247,12 @@ class BusRunner:
         self.verification = VerificationEngine(
             self.bus,
             policies=policies or _DEFAULT_POLICIES,
+            audit=self.audit,
         )
         self.verification.attach()
 
-        self.execution = ExecutionLayer(self.bus, audit=self.audit)
+        self.execution = ExecutionLayer(self.bus, audit=self.audit,
+                                        approval_validator=self.verification.consume_approval)
         self.execution.attach()
 
         # ── Reflex Engine (jabfy-core stub) ──────────────────────────────

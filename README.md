@@ -1,28 +1,36 @@
 # jabfy-sim
 
+## Livraison V0.0.1
+
+Le lancement global appartient à **jabfy-deploy**, pas à Simulation.
+Le guide [V0.0.1](docs/v0.0.1.md) renvoie vers les instructions de Deploy.
+Cette livraison ne commande que des appareils virtuels, en accès local.
+
 External simulation lab for the JABFY ecosystem. Speaks real MQTT in Zigbee2MQTT format
 so `jabfy-bus`'s real adapters see it as physical hardware.
 
 ## Démarrage avec Docker (recommandé)
 
-Prérequis : Docker avec Compose, et les dépôts `jabfy-simulation`, `jabfy-bus`
-et `jabfy-core` côte à côte dans le même dossier. Aucun Python ni Ollama à
-installer sur la machine hôte.
+Prérequis : Docker avec Compose et les cinq dépôts `jabfy-deploy`, `jabfy-simulation`,
+`jabfy-bus`, `jabfy-guard` et `jabfy-core` côte à côte avec les changements V0.0.1.
+Toutes les commandes Docker ci-dessous s'exécutent depuis **jabfy-deploy**.
 
 ```bash
-cd /chemin/vers/jabfy/jabfy-simulation
-docker compose up --build -d --wait
+cd /chemin/vers/jabfy/jabfy-deploy
+python3 scripts/start.py
 ```
 
-Ouvrir **http://localhost:8080**. Cette commande lance quatre conteneurs :
+Ouvrir **http://localhost:8080**. Deploy lance quatre conteneurs :
 
 | Service | Rôle |
 | --- | --- |
-| `jabfy-sim` | Interface 3D, éditeur et simulation avec le bus de vérification embarqué. |
+| `jabfy-sim` | Interface 3D, éditeur et simulation avec Bus et Guard embarqués. |
 | `mosquitto` | Échanges MQTT des appareils virtuels. |
 | `core` | Inventaire dynamique et validation des propositions IA. |
-| `ollama` | Serveur de modèles local, sans téléchargement automatique de modèle. |
+| `ollama` | Serveur de modèles local. Le lanceur télécharge un modèle sauf avec `--no-ai`. |
 
+Simulation fournit son Dockerfile, mais aucune orchestration globale. Guard reste
+une bibliothèque Python et Bus est embarqué pour cette V0.0.1, pas deux services réseau.
 Le premier lancement télécharge les images et construit les deux applications.
 Le simulateur reste ensuite actif : ce n’est plus une démo qui s’arrête après
 20 étapes. Les contrôles de santé vérifient le moteur et les connexions MQTT.
@@ -33,8 +41,8 @@ Télécharger le modèle de votre choix une fois, en remplaçant `NOM_DU_MODELE`
 par son nom et son tag Ollama :
 
 ```bash
-docker compose exec ollama ollama pull NOM_DU_MODELE
-docker compose exec ollama ollama list
+docker compose -f compose.local.yml exec ollama ollama pull NOM_DU_MODELE
+docker compose -f compose.local.yml exec ollama ollama list
 ```
 
 Dans l’onglet **IA**, cliquer sur **Actualiser**, puis sélectionner le modèle.
@@ -47,17 +55,17 @@ Les fonctionnalités cloud d’Ollama sont désactivées avec `OLLAMA_NO_CLOUD=1
 ### Arrêter, relancer et diagnostiquer
 
 ```bash
-docker compose stop              # arrêter tous les services, sans effacer les données
-docker compose up -d --wait       # relancer
-docker compose logs -f jabfy-sim core
-docker compose ps
+docker compose -f compose.local.yml stop # arrêter sans effacer les données
+docker compose -f compose.local.yml up -d --wait
+docker compose -f compose.local.yml logs -f jabfy-sim core
+docker compose -f compose.local.yml ps
 ```
 
 Les services redémarrent avec Docker sauf s’ils ont été arrêtés explicitement.
-Après modification du code, utiliser de nouveau `docker compose up --build -d --wait`.
-Le plan et l’audit existants sont conservés dans **`./data`**, monté dans le
+Après modification du code, relancer `python3 scripts/start.py --no-ai` depuis Deploy.
+Le plan et l’audit existants sont conservés dans **`jabfy-simulation/data`**, monté dans le
 conteneur : aucune migration du fichier `data/home.json` n’est nécessaire.
-`docker compose down` conserve ce dossier et le volume des modèles ; ne pas ajouter
+`docker compose -f compose.local.yml down` conserve ce dossier et le volume des modèles ; ne pas ajouter
 `--volumes` si vous souhaitez garder les modèles téléchargés.
 
 Seuls l’interface (8080) et MQTT (1883) sont publiés, sur **127.0.0.1** uniquement.
@@ -66,20 +74,21 @@ Core et Ollama sont accessibles entre conteneurs, pas depuis le réseau local.
 simulation locale ; arrêter l’ancienne ou choisir d’autres ports :
 
 ```bash
-SIM_PORT=8082 MQTT_PORT=1884 docker compose up -d --wait
+SIM_PORT=8082 MQTT_PORT=1884 python3 scripts/start.py --no-ai
 ```
 
 Dans ce cas, ouvrir http://localhost:8082 et réutiliser les mêmes variables pour
 les lancements suivants (ou les enregistrer dans un fichier `.env` local).
-La stack `jabfy-deploy` du site vitrine est indépendante et peut déjà occuper 8080.
+La configuration GHCR historique de Deploy n'est pas cette V0.0.1 : ne pas lancer
+les deux configurations ensemble.
 
 L’ancienne démo reste disponible à la demande, sans la faire tourner en parallèle
 avec la maison active :
 
 ```bash
-docker compose stop jabfy-sim
-docker compose run --rm --no-deps jabfy-sim jabfy-sim demo --broker mosquitto:1883
-docker compose up -d jabfy-sim
+docker compose -f compose.local.yml stop jabfy-sim
+docker compose -f compose.local.yml run --rm --no-deps jabfy-sim jabfy-sim demo --broker mosquitto:1883
+docker compose -f compose.local.yml up -d jabfy-sim
 ```
 
 ## Maison personnalisable et vue 3D
@@ -95,8 +104,8 @@ voisin `jabfy-bus` disponible (ne pas lancer en parallèle du conteneur `jabfy-s
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -e "../jabfy-bus[all]" -e ".[ui]"
-docker compose up mosquitto -d
+pip install -e "../jabfy-guard" -e "../jabfy-bus[all]" -e ".[ui]"
+docker compose -f ../jabfy-deploy/compose.local.yml up mosquitto -d
 jabfy-sim ui
 ```
 

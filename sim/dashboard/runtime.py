@@ -59,9 +59,9 @@ class Dashboard:
             self._subscription = self.runner.bus_runner.bus.subscribe(
                 "command.*", self._on_message, name="simulation_dashboard"
             )
-            if self.home:
+            if self.home and self.runner.bus_runner.verification.authorizer is None:
                 from sim.dashboard.commands import install_home_policies
-                install_home_policies(self.runner)
+                install_home_policies(self.runner, self.home)
 
     def _detach(self) -> None:
         if self._subscription is not None:
@@ -128,6 +128,12 @@ class Dashboard:
                 "executed": bus.execution.executed, "failed": bus.execution.failed,
             }
         snapshot = {
+            "release": "0.0.1",
+            "guard": {
+                "enabled": bool(runner.bus_runner and runner.bus_runner.verification.authorizer),
+                "mode": getattr(runner.bus_runner.verification.authorizer, "mode", None)
+                        if runner.bus_runner else None,
+            },
             "home_revision": self.revision,
             "ticks": runner._tick_count, "devices": devices, "stats": stats,
             "pipeline": runner.bus_runner is not None,
@@ -239,8 +245,16 @@ class Dashboard:
             self._detach()
             old.shutdown()
             if old.bus_runner and replacement.bus_runner:
+                from sim.dashboard.commands import install_home_policies
+                # Reuse the same durable journal after the old writer has stopped.
+                replacement.bus_runner.audit = old.bus_runner.audit
+                replacement.bus_runner.verification.audit = old.bus_runner.audit
+                replacement.bus_runner.execution.audit = old.bus_runner.audit
                 replacement.bus_runner.reflex.restore_unchanged_rules(old.bus_runner.reflex)
             try:
+                if replacement.bus_runner:
+                    from sim.dashboard.commands import install_home_policies
+                    install_home_policies(replacement, home)
                 replacement.start()
                 if self.store:
                     self.store.save(home)

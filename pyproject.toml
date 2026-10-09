@@ -35,10 +35,11 @@ modbus = ["pymodbus>=3.0"]
 # HTTP mock servers (SmartTV + NAS) — requires fastapi + uvicorn
 http = ["fastapi>=0.110", "uvicorn>=0.29"]
 # Local visualization with the normal bus pipeline (requires an MQTT broker).
-ui = ["jabfy-bus[all]", "fastapi>=0.110", "uvicorn>=0.29"]
+ui = ["jabfy-bus[all]", "jabfy-guard>=0.1,<0.2", "fastapi>=0.110", "uvicorn>=0.29"]
 # All optional extras
-full = ["jabfy-bus[all]", "pymodbus>=3.0", "fastapi>=0.110", "uvicorn>=0.29"]
+full = ["jabfy-bus[all]", "jabfy-guard>=0.1,<0.2", "pymodbus>=3.0", "fastapi>=0.110", "uvicorn>=0.29"]
 dev = [
+    "jabfy-guard>=0.1,<0.2",
     "jabfy-bus[all]",
     "pymodbus>=3.0",
     "fastapi>=0.110",

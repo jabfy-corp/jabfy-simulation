@@ -313,14 +313,12 @@ def test_new_catalog_devices_are_persisted_discovered_and_controllable(house_api
 
 
 def test_a_bus_policy_rejection_does_not_execute_manual_control(house_api):
-    from jabfy_bus.core.types import RiskLevel, TrustLevel
-    from jabfy_bus.verification.policies import Policy
+    from jabfy_guard import Policy
 
     runner = house_api.runner
-    runner.bus_runner.verification.policies.insert(0, Policy(
-        name="test_explicit_deny", effect="deny", max_risk=RiskLevel.HIGH,
-        entities={"switch.sim_maison_salon_lamp_state"},
-        actions={"turn_on"}, min_trust=TrustLevel.INTERNAL,
+    runner.bus_runner.verification.authorizer.policies.rules.insert(0, Policy(
+        id="test_explicit_deny", effect="deny", home_id=house_api.home.id,
+        roles=["simulation"], devices=["salon_lamp"], actions=["turn_on"],
     ))
     before = len(runner.transport_calls)
     response = house_api.client.post(

@@ -214,7 +214,7 @@ def test_bus_journal_is_bounded_ordered_and_unsubscribes_on_shutdown(runner):
         bus=bus,
         _client=SimpleNamespace(is_connected=lambda: True),
         reflex=SimpleNamespace(proposals=0),
-        verification=SimpleNamespace(decisions=[]),
+        verification=SimpleNamespace(decisions=[], authorizer=None),
         execution=SimpleNamespace(executed=0, failed=0),
     )
     messages = []
