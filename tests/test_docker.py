@@ -8,29 +8,14 @@ import runpy
 from unittest.mock import Mock
 
 import pytest
-import yaml
 
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def test_compose_runs_the_complete_house_stack_and_keeps_data():
-    config = yaml.safe_load((ROOT / "docker-compose.yml").read_text())
-    services = config["services"]
-    assert set(services) == {"mosquitto", "jabfy-sim", "core", "ollama"}
-    assert "command" not in services["jabfy-sim"]  # Image default is the persistent UI.
-    assert "./data:/app/data" in services["jabfy-sim"]["volumes"]
-    assert "ollama-models:/root/.ollama" in services["ollama"]["volumes"]
-    assert services["ollama"]["environment"]["OLLAMA_NO_CLOUD"] == "1"
-    assert services["core"]["environment"]["JABFY_SIMULATION_URL"] == "http://jabfy-sim:8080"
-    assert services["core"]["environment"]["OLLAMA_HOST"] == "http://ollama:11434"
-    assert services["jabfy-sim"]["depends_on"]["mosquitto"]["condition"] == "service_healthy"
-    for name, service in services.items():
-        assert service["restart"] == "unless-stopped"
-        assert "healthcheck" in service
-        assert all(port.startswith("127.0.0.1:") for port in service.get("ports", []))
-        if name in {"core", "ollama"}:
-            assert "ports" not in service
+def test_simulation_does_not_own_stack_orchestration():
+    assert not (ROOT / "docker-compose.yml").exists()
+    assert not (ROOT / "scripts/start.py").exists()
 
 
 def test_container_start_waits_for_mqtt_then_executes_ui(monkeypatch):
@@ -62,6 +47,17 @@ def test_container_start_exits_when_mqtt_never_starts(monkeypatch):
         module["main"]()
 
 
+def test_healthcheck_rejects_stack_without_guard(monkeypatch):
+    module = runpy.run_path(str(ROOT / "docker/healthcheck.py"))
+    state = {"status": "running", "broker": {"connected": True},
+             "stats": {"bus": {"connected": True}}, "guard": {"enabled": False}}
+    monkeypatch.setitem(module["main"].__globals__, "urlopen",
+                        lambda *args, **kwargs: io.StringIO(json.dumps(state)))
+    with pytest.raises(SystemExit) as result:
+        module["main"]()
+    assert result.value.code == 1
+
+
 @pytest.mark.parametrize("status,emitter,bus,expected", [
     ("running", True, True, 0),
     ("error", True, True, 1),
@@ -72,6 +68,7 @@ def test_container_start_exits_when_mqtt_never_starts(monkeypatch):
 def test_healthcheck_requires_a_working_simulation(monkeypatch, status, emitter, bus, expected):
     module = runpy.run_path(str(ROOT / "docker/healthcheck.py"))
     state = {"status": status, "broker": {"connected": emitter},
+             "guard": {"enabled": True},
              "stats": {"bus": {"connected": bus}}}
     monkeypatch.setitem(module["main"].__globals__, "urlopen",
                         lambda *args, **kwargs: io.StringIO(json.dumps(state)))

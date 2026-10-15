@@ -18,7 +18,7 @@ class CoreClient:
             headers={"Content-Type": "application/json"},
         )
         try:
-            with urlopen(request, timeout=90 if body is not None else 5) as response:
+            with urlopen(request, timeout=150 if body is not None else 5) as response:
                 return json.loads(response.read(2_000_000))
         except HTTPError as exc:
             try:

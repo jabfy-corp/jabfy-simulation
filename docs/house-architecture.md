@@ -37,30 +37,34 @@ Le code applicatif n’a ni framework de composants, ni bundler, ni dépendance 
 
 ## Exécution en conteneurs
 
-`docker-compose.yml` lance `jabfy-sim` (interface et moteur), `mosquitto`, `core`
-et `ollama` sur le même réseau Docker. Le bus reste embarqué dans le moteur :
+`jabfy-deploy/compose.local.yml` lance `jabfy-sim` (interface et moteur), `mosquitto`,
+`core` et `ollama` sur le même réseau Docker. Deploy seul possède l'orchestration ;
+Simulation fournit son image. Guard est une bibliothèque Python intégrée au runtime.
+Le bus reste embarqué dans le moteur :
 aucun second bus ne doit exécuter les mêmes commandes. Core lit
 `http://jabfy-sim:8080/api/ai/context`, interroge `http://ollama:11434` et reçoit
 les demandes via le proxy du simulateur vers `http://core:8000`.
 Les serveurs d’appareils HTTP/Modbus et leurs clients restent sur `127.0.0.1`
 dans le conteneur du simulateur, indépendamment de l’adresse du broker MQTT.
 
-La maison et l’audit sont montés depuis `./data`, jamais copiés dans l’image.
+La maison et l’audit sont montés depuis `../jabfy-simulation/data` (depuis Deploy),
+jamais copiés dans l’image.
 Les modèles restent dans le volume `ollama-models`. Le contexte de construction
-du simulateur est limité par `Dockerfile.dockerignore` aux sources des deux paquets ;
+du simulateur est limité par `Dockerfile.dockerignore` aux sources de Simulation,
+Bus et Guard ;
 les autres dépôts, secrets, environnements virtuels et données sont exclus.
 
 Compose attend la disponibilité de MQTT et de Core avant de lancer l’interface.
 `docker/start.py` attend aussi MQTT lors d’un redémarrage direct des conteneurs,
 puis remplace son processus par celui de l’application pour transmettre les signaux.
 `docker/healthcheck.py` vérifie le moteur et ses deux connexions MQTT. Un contrôle
-de santé en échec est visible dans `docker compose ps` ; il ne redémarre pas à lui
+de santé en échec est visible depuis Deploy dans `docker compose -f compose.local.yml ps` ; il ne redémarre pas à lui
 seul un processus encore vivant. Les processus arrêtés bénéficient de
 `restart: unless-stopped`.
 
 L’interface et MQTT sont publiés uniquement sur loopback. Core et Ollama n’ont
-aucun port hôte publié. Aucune configuration GPU ni téléchargement automatique de
-modèle n’est imposé ; le README explique l’ajout explicite d’un modèle.
+aucun port hôte publié. Aucune configuration GPU n'est imposée. Le lanceur de Deploy
+télécharge un modèle sauf avec `--no-ai` ; Compose seul n'en télécharge aucun.
 
 ## Document Home v1
 

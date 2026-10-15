@@ -18,28 +18,11 @@ def entity_id(device) -> str:
     return f"{domain}.{wire_id}_{suffix}"
 
 
-def install_home_policies(runner) -> None:
-    """Explicit policies limited to the virtual appliances in this home.
+def install_home_policies(runner, home) -> None:
+    """Replace legacy policy evaluation, never add a bypass around Guard."""
+    from sim.dashboard.guard import HomeGuard
 
-They are added only for the house editor's generated simulation namespace.
-Legacy YAML runs retain their original policies. Real hardware is not registered
-through this editor or addressable through its command endpoint.
-"""
-    from jabfy_bus.core.types import RiskLevel, TrustLevel
-    from jabfy_bus.verification.policies import Policy
-
-    installed = {policy.name for policy in runner.bus_runner.verification.policies}
-    for device in runner.devices:
-        if not device.telemetry_topic.startswith("zigbee2mqtt/sim_"):
-            continue
-        capabilities = device_capabilities(device.device_type)
-        actions = {item["action"] for item in capabilities["actions"]}
-        if actions and f"sim_home_{device.id}" not in installed:
-            runner.bus_runner.verification.policies.append(Policy(
-                name=f"sim_home_{device.id}", effect="allow", max_risk=RiskLevel.HIGH,
-                entities={entity_id(device)}, domains={capabilities["domain"]},
-                actions=actions, min_trust=TrustLevel.INTERNAL,
-            ))
+    runner.bus_runner.verification.authorizer = HomeGuard(runner, home)
 
 
 def execute_command(runner, device_id: str, action: str, params: dict[str, Any]) -> dict:
