@@ -23,7 +23,3 @@ Docstring du module : *MQTT emitter — publishes device telemetry and receives 
 - **Utilise** : [sim/config/schema.py](config-schema.md), [sim/devices/base.py](devices-base.md)
 - **Utilisé par** : [sim/runner.py](runner.md)
 - **Testé par** : `tests/test_home_api.py` → [tests de jabfy-simulation](tests.md)
-
-## Questions fréquentes
-
-- « Montre-moi où la lampe change d'état » → `_on_message` l.97.

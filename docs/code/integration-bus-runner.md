@@ -30,7 +30,3 @@ Docstring du module : *BusRunner — embeds jabfy-bus pipeline in-process with r
 - **Utilise** : jabfy_bus/adapters/http/adapter.py (jabfy-bus), jabfy_bus/adapters/modbus/adapter.py (jabfy-bus), jabfy_bus/adapters/modbus/registers.py (jabfy-bus), jabfy_bus/adapters/zigbee2mqtt/adapter.py (jabfy-bus), jabfy_bus/audit/log.py (jabfy-bus), jabfy_bus/core/bus.py (jabfy-bus), jabfy_bus/core/registry.py (jabfy-bus), jabfy_bus/core/types.py (jabfy-bus), jabfy_bus/execution/executor.py (jabfy-bus), jabfy_bus/execution/translators.py (jabfy-bus), jabfy_bus/verification/engine.py (jabfy-bus), jabfy_bus/verification/policies.py (jabfy-bus), jabfy_bus/verification/risk.py (jabfy-bus), [sim/config/schema.py](config-schema.md), [sim/integration/modbus_client.py](integration-modbus-client.md), [sim/integration/reflex.py](integration-reflex.md)
 - **Utilisé par** : [sim/runner.py](runner.md)
 - **Testé par** : `tests/test_bus_http_modbus.py`, `tests/test_home_api.py` → [tests de jabfy-simulation](tests.md)
-
-## Questions fréquentes
-
-- « Combien de bus tournent pendant la démo ? » → deux : celui de Core et celui du simulateur.
