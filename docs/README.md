@@ -23,9 +23,14 @@ Le lancement de la pile complète appartient à jabfy-deploy.
 
 ## Pages
 
-- [Architecture du prototype de maison](house-architecture.md)
+- [Installation et lancement](installation.md)
+- [Architecture](architecture.md) et [prototype de maison](house-architecture.md)
+- [Interfaces](interfaces.md)
+- [Tests](tests.md)
+- [Sécurité](security.md)
+- [État actuel et feuille de route](roadmap.md)
 - [Jabfy V0.0.1](v0.0.1.md)
-- [Documentation du code, fichier par fichier](code/README.md)
+- [Documentation du code, fichier par fichier](code/README.md), pour reprendre le code sans l'auteur d'origine
 
 ## Lancement pour le développement
 
