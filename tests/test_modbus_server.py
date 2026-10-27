@@ -160,7 +160,8 @@ class TestModbusServerConstruction:
         from sim.devices.lighting import OnOffLight
         lamp = OnOffLight(id="l", location="s", topic_prefix="z/l")
         sensor = make_sensor()
-        server = ModbusServer([lamp, sensor])
+        thermo = make_thermostat()
+        server = ModbusServer([lamp, sensor, lamp, thermo])
         units = server.unit_map()
-        assert len(units) == 1
-        assert list(units.values())[0] == "temp_sensor"
+        # SimRunner assigns IDs among climate devices only, regardless of other types.
+        assert units == {1: sensor.id, 2: thermo.id}

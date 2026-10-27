@@ -34,9 +34,12 @@ bus = ["jabfy-bus[all]"]
 modbus = ["pymodbus>=3.0"]
 # HTTP mock servers (SmartTV + NAS) — requires fastapi + uvicorn
 http = ["fastapi>=0.110", "uvicorn>=0.29"]
+# Local visualization with the normal bus pipeline (requires an MQTT broker).
+ui = ["jabfy-bus[all]", "jabfy-guard>=0.1,<0.2", "fastapi>=0.110", "uvicorn>=0.29"]
 # All optional extras
-full = ["jabfy-bus[all]", "pymodbus>=3.0", "fastapi>=0.110", "uvicorn>=0.29"]
+full = ["jabfy-bus[all]", "jabfy-guard>=0.1,<0.2", "pymodbus>=3.0", "fastapi>=0.110", "uvicorn>=0.29"]
 dev = [
+    "jabfy-guard>=0.1,<0.2",
     "jabfy-bus[all]",
     "pymodbus>=3.0",
     "fastapi>=0.110",
@@ -53,6 +56,9 @@ jabfy-sim = "sim.cli:main"
 [tool.setuptools.packages.find]
 include = ["sim*"]
 
+[tool.setuptools.package-data]
+"sim.dashboard" = ["static/*.html", "static/*.css", "static/*.js", "static/vendor/*"]
+
 [tool.ruff]
 line-length = 100
 target-version = "py311"
@@ -60,3 +66,4 @@ target-version = "py311"
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"
+markers = ["e2e: needs the running docker compose stack (JABFY_E2E_URL)"]

@@ -152,8 +152,7 @@ class ModbusServer:
 
         self._units: dict[int, Device] = {
             idx + 1: dev
-            for idx, dev in enumerate(devices)
-            if climate_types and isinstance(dev, climate_types)
+            for idx, dev in enumerate(dev for dev in devices if isinstance(dev, climate_types))
         }
 
         self._loop: asyncio.AbstractEventLoop | None = None

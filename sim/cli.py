@@ -141,6 +141,44 @@ def _parse_broker(broker_str: str) -> tuple[str, int]:
     return broker_str, 1883
 
 
+def cmd_ui(args: argparse.Namespace) -> int:
+    """Serve a local dashboard and run its real-protocol simulation."""
+    try:
+        import uvicorn
+        from sim.dashboard.app import create_app
+    except ImportError:
+        print('Dashboard dependencies missing. Install: pip install -e ".[ui]"', file=sys.stderr)
+        return 1
+
+    from sim.config.loader import load_config
+    from sim.config.schema import SimConfig
+    from sim.home import HouseStore, default_home, from_sim_config, to_sim_config
+    from sim.runner import SimRunner
+
+    try:
+        config = load_config(args.config) if args.config else SimConfig(tick_interval_ms=200)
+        store = HouseStore(Path(args.home_file).expanduser())
+        home = store.load(from_sim_config(config) if args.config else default_home())
+        config = to_sim_config(home, config)
+        if args.broker:
+            config.broker.host, config.broker.port = _parse_broker(args.broker)
+        if config.audit_path is None:
+            config.audit_path = str(Path(args.home_file).with_suffix(".audit.jsonl"))
+        if config.tick_interval_ms <= 0:
+            raise ValueError("tick_interval_ms must be greater than zero")
+        runner = SimRunner(config)
+    except (OSError, ValueError) as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
+
+    print(f"\nJabfy · Simulation → http://{args.host}:{args.port}\n", flush=True)
+    uvicorn.run(
+        create_app(runner, home=home, store=store, runner_factory=SimRunner, core_url=args.core_url),
+        host=args.host, port=args.port, log_level="warning",
+    )
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="jabfy-sim",
@@ -168,6 +206,15 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--config", required=True, metavar="FILE")
     run.add_argument("--broker", default=None, metavar="HOST[:PORT]", help="override broker address")
     run.set_defaults(func=cmd_run)
+
+    ui = sub.add_parser("ui", help="visualize the simulation in a local web dashboard")
+    ui.add_argument("--config", default=None, metavar="FILE", help="YAML config (default: demo home)")
+    ui.add_argument("--broker", default=None, metavar="HOST[:PORT]", help="override broker address")
+    ui.add_argument("--host", default="127.0.0.1", help="dashboard bind address (default: loopback)")
+    ui.add_argument("--port", type=int, default=8080, help="dashboard HTTP port (default: 8080)")
+    ui.add_argument("--home-file", default="data/home.json", help="saved house document")
+    ui.add_argument("--core-url", default="http://127.0.0.1:8000", help="local Jabfy Core API")
+    ui.set_defaults(func=cmd_ui)
 
     return parser
 

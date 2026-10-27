@@ -9,3 +9,4 @@ venv/
 *.log
 audit*.jsonl
 .pytest_cache/
+data/
