@@ -19,7 +19,7 @@ Servie par `sim/dashboard/app.py`. Les routes qui modifient l'état refusent les
 | POST | `/api/ai/prompt` | `{model, prompt}` transmis à `POST /prompt` de Core (202) |
 | GET | `/api/ai/runs/{run_id}` | Suivi d'une exécution, via `GET /prompts/{id}` de Core |
 
-`prompt` fait de 1 à 4000 caractères. `/api/ai/prompt` et `/api/ai/runs/{id}` demandent un Core qui expose `/prompt` (branche `core-12-bus-integration`). `/api/ai/propose` correspond à la V0.0.1 de Core (`core-3`). Le détail du contrat est dans [Architecture du prototype de maison](house-architecture.md).
+`prompt` fait de 1 à 4000 caractères. `/api/ai/prompt` et `/api/ai/runs/{id}` passent par `POST /prompt` et `GET /prompts/{id}` de Core, sur `main` depuis jabfy-corp/jabfy-core#13. `/api/ai/propose` passe par `POST /simulation/propose`, toujours présente sur `main` de Core. Le détail du contrat est dans [Architecture du prototype de maison](house-architecture.md).
 
 ## Types d'appareils
 

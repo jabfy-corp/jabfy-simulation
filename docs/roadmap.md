@@ -22,4 +22,4 @@
 - Faire exécuter `pytest` par la CI.
 - Utiliser le simulateur pour des benchmarks reproductibles lancés en CI (objectif performance du projet).
 - Raccorder du matériel réel derrière les mêmes identifiants, avec un adaptateur d'inventaire et de transport, de la découverte, de l'authentification et des politiques propres au matériel.
-- Faire correspondre la doc et le code de Core quand `core-12-bus-integration` sera fusionnée (`/api/ai/propose` n'y a plus d'équivalent confirmé).
+- Choisir avec Core si `/api/ai/propose` reste à côté de `/api/ai/prompt` : les deux routes de Core existent sur `main`.
